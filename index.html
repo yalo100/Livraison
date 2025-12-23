@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Livraison – Connexion client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <div class="mark">🚚</div>
+        <span>Livraison Client</span>
+      </div>
+      <div class="chips">
+        <span class="chip">Supabase Auth</span>
+        <span class="chip">Temps réel</span>
+        <span class="chip">Commandes sécurisées</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__copy">
+          <h1>Suivez vos livraisons en temps réel</h1>
+          <p>
+            Créez vos demandes, visualisez l'état de chaque étape et restez informé
+            instantanément des mises à jour de statut. Aucun backend supplémentaire,
+            uniquement Supabase et une expérience moderne.
+          </p>
+          <div class="info-banner">
+            <strong>Rappel :</strong>
+            <span>Une commande est verrouillée dès sa création. Aucun update possible.</span>
+          </div>
+        </div>
+
+        <div class="card" aria-label="Connexion client">
+          <div class="card__header">
+            <div>
+              <p class="eyebrow">Espace sécurisé</p>
+              <h2>Connexion</h2>
+            </div>
+            <div class="badge">Client</div>
+          </div>
+
+          <div class="card__content">
+            <form id="login-form">
+              <div class="field">
+                <label for="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="vous@example.com"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+              <div class="field">
+                <label for="password">Mot de passe</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+              <button type="submit">Se connecter</button>
+              <p id="login-feedback" class="form-feedback" role="status"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="status-template">
+      <div class="status-list"></div>
+    </template>
+
+    <script type="module">
+      import { redirectIfLoggedIn, setupAuthUI } from './js/auth.js'
+      await redirectIfLoggedIn()
+      setupAuthUI()
+    </script>
+  </body>
+</html>
