@@ -1,16 +1,20 @@
 import { supabase } from './supabase.js'
 
-const detectBasePath = () => {
-  const parts = window.location.pathname.split('/').filter(Boolean)
-  const first = parts[0]
-  if (first && !first.includes('.')) {
-    return `/${first}/`
+const moduleBasePath = (() => {
+  const modulePath = new URL('.', import.meta.url).pathname
+  const segments = modulePath.split('/')
+  const jsIndex = segments.lastIndexOf('js')
+
+  if (jsIndex > 0) {
+    const base = segments.slice(0, jsIndex).join('/')
+    return base.endsWith('/') ? base : `${base}/`
   }
-  return '/'
-}
+
+  return modulePath.endsWith('/') ? modulePath : `${modulePath}/`
+})()
 
 const buildUrl = (file) =>
-  new URL(file, `${window.location.origin}${detectBasePath()}`).toString()
+  new URL(file, `${window.location.origin}${moduleBasePath}`).toString()
 
 const dashboardUrl = () => buildUrl('dashboard.html')
 const adminDashboardUrl = () => buildUrl('admin-dashboard.html')
