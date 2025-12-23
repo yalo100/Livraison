@@ -118,8 +118,13 @@ export function setupLogout(buttonSelector = '.logout-button') {
     button.addEventListener('click', async () => {
       button.disabled = true
       button.textContent = 'Déconnexion...'
-      await supabase.auth.signOut()
-      window.location.href = loginUrl()
+      try {
+        await supabase.auth.signOut()
+      } catch (error) {
+        console.warn('Erreur lors de la déconnexion', error)
+      } finally {
+        window.location.href = loginUrl()
+      }
     })
   })
 }
