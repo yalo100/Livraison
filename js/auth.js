@@ -1,9 +1,20 @@
 import { supabase } from './supabase.js'
 
-const dashboardUrl = () => new URL('dashboard.html', window.location.href).toString()
-const adminDashboardUrl = () =>
-  new URL('admin-dashboard.html', window.location.href).toString()
-const loginUrl = () => new URL('index.html', window.location.href).toString()
+const detectBasePath = () => {
+  const parts = window.location.pathname.split('/').filter(Boolean)
+  const first = parts[0]
+  if (first && !first.includes('.')) {
+    return `/${first}/`
+  }
+  return '/'
+}
+
+const buildUrl = (file) =>
+  new URL(file, `${window.location.origin}${detectBasePath()}`).toString()
+
+const dashboardUrl = () => buildUrl('dashboard.html')
+const adminDashboardUrl = () => buildUrl('admin-dashboard.html')
+const loginUrl = () => buildUrl('index.html')
 
 export async function fetchUserRole(userId) {
   if (!userId) return 'client'
