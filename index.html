@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Livraison – Connexion client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <div class="mark">🚚</div>
+        <span>Livraison Client</span>
+      </div>
+      <nav class="nav">
+        <a href="#services">Services</a>
+        <a href="#tracking">Suivi</a>
+        <a class="nav__cta" href="#login-card">Se connecter</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow eyebrow--accent">Inspiré par la fiabilité DHL</p>
+          <h1>Livraisons rapides, visibilité totale</h1>
+          <p>
+            Planifiez vos envois, consultez l’avancement en temps réel et restez informé
+            de chaque étape. Une expérience moderne, sécurisée et 100% Supabase.
+          </p>
+          <div class="cta-row">
+            <a class="button ghost" href="#services">Découvrir la plateforme</a>
+            <a class="button" href="#login-card">Accéder à mon compte</a>
+          </div>
+          <div class="hero__stats">
+            <div>
+              <p class="stat-value">99.9%</p>
+              <p class="stat-label">Disponibilité</p>
+            </div>
+            <div>
+              <p class="stat-value">Temps réel</p>
+              <p class="stat-label">Suivi des statuts</p>
+            </div>
+            <div>
+              <p class="stat-value">Sécurisé</p>
+              <p class="stat-label">RLS Supabase</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card--glass highlight" id="login-card" aria-label="Connexion client">
+          <div class="card__header">
+            <div>
+              <p class="eyebrow">Espace sécurisé</p>
+              <h2>Connexion</h2>
+            </div>
+            <div class="badge">Client</div>
+          </div>
+
+          <div class="card__content">
+            <form id="login-form">
+              <div class="field">
+                <label for="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="vous@example.com"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+              <div class="field">
+                <label for="password">Mot de passe</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+              <button type="submit">Se connecter</button>
+              <p id="login-feedback" class="form-feedback" role="status"></p>
+            </form>
+            <div class="trust">
+              <span class="dot"></span>
+              <p class="muted">Vos commandes sont verrouillées après création.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cards-grid" id="services">
+        <article class="card card--feature">
+          <div class="icon">⏱️</div>
+          <h3>Création rapide</h3>
+          <p>
+            Enregistrez vos adresses de collecte et de livraison en quelques secondes.
+            Les commandes sont verrouillées dès l'enregistrement pour garantir l'intégrité.
+          </p>
+        </article>
+        <article class="card card--feature">
+          <div class="icon">📡</div>
+          <h3>Suivi temps réel</h3>
+          <p>
+            Les statuts s’actualisent en direct via Supabase Realtime. Aucune action
+            manuelle, aucune page à recharger.
+          </p>
+        </article>
+        <article class="card card--feature">
+          <div class="icon">🔒</div>
+          <h3>Accès sécurisé</h3>
+          <p>
+            Authentification Supabase, règles RLS appliquées et séparation claire entre
+            clients et administrateurs.
+          </p>
+        </article>
+      </section>
+
+      <section class="panel" id="tracking">
+        <div class="panel__content">
+          <div>
+            <p class="eyebrow">Tracking</p>
+            <h2>Une vue claire de chaque étape</h2>
+            <p class="muted">
+              Consultez l’historique des statuts, la date de création, les horaires de
+              collecte et de livraison prévus. Le tout en lecture seule pour préserver
+              la traçabilité.
+            </p>
+            <div class="chips">
+              <span class="chip">Lecture seule</span>
+              <span class="chip">Statuts détaillés</span>
+              <span class="chip">Notifications en direct</span>
+            </div>
+          </div>
+          <div class="panel__mock">
+            <div class="mock-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Commande</p>
+                  <strong>#10245</strong>
+                </div>
+                <span class="badge">en transit</span>
+              </header>
+              <ul>
+                <li><span>Collecte</span><strong>12 Av. des Lilas, Paris</strong></li>
+                <li><span>Livraison</span><strong>5 rue du Port, Nantes</strong></li>
+                <li><span>Dernier statut</span><strong>Colis scanné au hub</strong></li>
+              </ul>
+              <div class="timeline">
+                <div class="dot dot--active"></div>
+                <div class="line"></div>
+                <div class="dot dot--active"></div>
+                <div class="line"></div>
+                <div class="dot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="status-template">
+      <div class="status-list"></div>
+    </template>
+
+    <script type="module">
+      import { redirectIfLoggedIn, setupAuthUI } from './js/auth.js'
+      await redirectIfLoggedIn()
+      setupAuthUI()
+    </script>
+  </body>
+</html>
