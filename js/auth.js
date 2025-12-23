@@ -1,12 +1,15 @@
 import { supabase } from './supabase.js'
 
+const dashboardUrl = () => new URL('dashboard.html', window.location.href).toString()
+const loginUrl = () => new URL('index.html', window.location.href).toString()
+
 export async function redirectIfLoggedIn() {
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   if (session) {
-    window.location.href = '/dashboard.html'
+    window.location.href = dashboardUrl()
   }
 }
 
@@ -16,7 +19,7 @@ export async function requireAuth() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    window.location.href = '/index.html'
+    window.location.href = loginUrl()
     return null
   }
 
@@ -61,7 +64,7 @@ export function setupAuthUI() {
     feedback.classList.add('success')
 
     setTimeout(() => {
-      window.location.href = '/dashboard.html'
+      window.location.href = dashboardUrl()
     }, 600)
   })
 }
@@ -72,7 +75,7 @@ export function setupLogout(buttonSelector = '.logout-button') {
       button.disabled = true
       button.textContent = 'Déconnexion...'
       await supabase.auth.signOut()
-      window.location.href = '/index.html'
+      window.location.href = loginUrl()
     })
   })
 }
