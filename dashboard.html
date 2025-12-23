@@ -117,10 +117,10 @@
       import { initOrders } from './js/orders.js'
 
       ;(async () => {
-        const session = await requireAuth()
-        if (!session) return
+        const auth = await requireAuth(['client'])
+        if (!auth?.session) return
 
-        const email = session.user.email || 'Client'
+        const email = auth.session.user.email || 'Client'
         document.getElementById('user-email').textContent = email
         document.getElementById('user-avatar').textContent = email
           .split('@')[0]
@@ -128,7 +128,7 @@
           .toUpperCase()
 
         setupLogout()
-        initOrders(session.user)
+        initOrders(auth.session.user)
       })()
     </script>
   </body>

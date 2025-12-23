@@ -1,7 +1,22 @@
 import { supabase } from './supabase.js'
 
 const dashboardUrl = () => new URL('dashboard.html', window.location.href).toString()
+const adminDashboardUrl = () =>
+  new URL('admin-dashboard.html', window.location.href).toString()
 const loginUrl = () => new URL('index.html', window.location.href).toString()
+
+export async function fetchUserRole(userId) {
+  if (!userId) return 'client'
+
+  const baseQuery = supabase.from('profiles').select('role').eq('id', userId)
+  const { data, error } = await (baseQuery.maybeSingle ? baseQuery.maybeSingle() : baseQuery.single())
+
+  if (error) {
+    console.warn('Unable to fetch user role, fallback to client', error)
+  }
+
+  return data?.role || 'client'
+}
 
 export async function redirectIfLoggedIn() {
   const {
@@ -9,11 +24,12 @@ export async function redirectIfLoggedIn() {
   } = await supabase.auth.getSession()
 
   if (session) {
-    window.location.href = dashboardUrl()
+    const role = await fetchUserRole(session.user.id)
+    window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
   }
 }
 
-export async function requireAuth() {
+export async function requireAuth(allowedRoles = []) {
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -23,7 +39,14 @@ export async function requireAuth() {
     return null
   }
 
-  return session
+  const role = await fetchUserRole(session.user.id)
+
+  if (allowedRoles.length && !allowedRoles.includes(role)) {
+    window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+    return null
+  }
+
+  return { session, role }
 }
 
 export function setupAuthUI() {
@@ -45,7 +68,7 @@ export function setupAuthUI() {
     submitButton.disabled = true
     submitButton.textContent = 'Connexion...'
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -64,7 +87,9 @@ export function setupAuthUI() {
     feedback.classList.add('success')
 
     setTimeout(() => {
-      window.location.href = dashboardUrl()
+      fetchUserRole(data?.user?.id).then((role) => {
+        window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+      })
     }, 600)
   })
 }
