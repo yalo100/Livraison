@@ -1,0 +1,106 @@
+import { supabase } from './supabase.js'
+
+const dashboardUrl = () => new URL('dashboard.html', window.location.href).toString()
+const adminDashboardUrl = () =>
+  new URL('admin-dashboard.html', window.location.href).toString()
+const loginUrl = () => new URL('index.html', window.location.href).toString()
+
+export async function fetchUserRole(userId) {
+  if (!userId) return 'client'
+
+  const baseQuery = supabase.from('profiles').select('role').eq('id', userId)
+  const { data, error } = await (baseQuery.maybeSingle ? baseQuery.maybeSingle() : baseQuery.single())
+
+  if (error) {
+    console.warn('Unable to fetch user role, fallback to client', error)
+  }
+
+  return data?.role || 'client'
+}
+
+export async function redirectIfLoggedIn() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (session) {
+    const role = await fetchUserRole(session.user.id)
+    window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+  }
+}
+
+export async function requireAuth(allowedRoles = []) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    window.location.href = loginUrl()
+    return null
+  }
+
+  const role = await fetchUserRole(session.user.id)
+
+  if (allowedRoles.length && !allowedRoles.includes(role)) {
+    window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+    return null
+  }
+
+  return { session, role }
+}
+
+export function setupAuthUI() {
+  const loginForm = document.getElementById('login-form')
+  const feedback = document.getElementById('login-feedback')
+
+  if (!loginForm) return
+
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
+
+    const submitButton = loginForm.querySelector('button[type="submit"]')
+    const email = loginForm.email.value.trim()
+    const password = loginForm.password.value
+
+    feedback.textContent = ''
+    feedback.className = 'form-feedback'
+
+    submitButton.disabled = true
+    submitButton.textContent = 'Connexion...'
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    submitButton.disabled = false
+    submitButton.textContent = 'Se connecter'
+
+    if (error) {
+      feedback.textContent =
+        'Impossible de se connecter. Vérifiez vos identifiants ou votre connexion.'
+      feedback.classList.add('error')
+      return
+    }
+
+    feedback.textContent = 'Connexion réussie. Redirection en cours...'
+    feedback.classList.add('success')
+
+    setTimeout(() => {
+      fetchUserRole(data?.user?.id).then((role) => {
+        window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+      })
+    }, 600)
+  })
+}
+
+export function setupLogout(buttonSelector = '.logout-button') {
+  document.querySelectorAll(buttonSelector).forEach((button) => {
+    button.addEventListener('click', async () => {
+      button.disabled = true
+      button.textContent = 'Déconnexion...'
+      await supabase.auth.signOut()
+      window.location.href = loginUrl()
+    })
+  })
+}
