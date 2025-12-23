@@ -17,7 +17,7 @@ const buildUrl = (file) =>
   new URL(file, `${window.location.origin}${moduleBasePath}`).toString()
 
 const dashboardUrl = () => buildUrl('dashboard.html')
-const adminDashboardUrl = () => buildUrl('admin-dashboard.html')
+const adminDashboardUrl = () => buildUrl('admin.html')
 const loginUrl = () => buildUrl('index.html')
 
 export async function fetchUserRole(userId) {
@@ -44,7 +44,7 @@ export async function redirectIfLoggedIn() {
   }
 }
 
-export async function requireAuth(allowedRoles = []) {
+export async function requireAuth(allowedRoles = [], { redirectOnForbidden = true } = {}) {
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -57,11 +57,15 @@ export async function requireAuth(allowedRoles = []) {
   const role = await fetchUserRole(session.user.id)
 
   if (allowedRoles.length && !allowedRoles.includes(role)) {
-    window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
-    return null
+    if (redirectOnForbidden) {
+      window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+      return null
+    }
+
+    return { session, role, allowed: false }
   }
 
-  return { session, role }
+  return { session, role, allowed: true }
 }
 
 export function setupAuthUI() {
