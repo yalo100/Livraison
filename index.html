@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Livraison – Connexion client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <div class="mark">🚚</div>
+        <span>Livraison Client</span>
+      </div>
+      <nav class="nav">
+        <a href="#services">Solutions</a>
+        <a href="#about">Notre ADN</a>
+        <a href="#tracking">Suivi</a>
+        <a class="nav__cta" href="#login-card">Se connecter</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow eyebrow--accent">Logistique premium</p>
+          <h1>Votre partenaire livraison, avec la rigueur d'un leader mondial</h1>
+          <p class="lead">
+            Nous orchestrons vos expéditions du premier au dernier kilomètre : promesse de
+            rapidité, visibilité temps réel, et support client proactif. Un front moderne
+            porté par Supabase pour une expérience aussi fiable que les grands noms du
+            secteur.
+          </p>
+          <div class="cta-row">
+            <a class="button" href="#login-card">Se connecter</a>
+            <a class="button ghost" href="#about">Découvrir l'entreprise</a>
+          </div>
+          <div class="hero__stats">
+            <div>
+              <p class="stat-value">+120</p>
+              <p class="stat-label">Villes desservies</p>
+            </div>
+            <div>
+              <p class="stat-value">24/7</p>
+              <p class="stat-label">Suivi & support</p>
+            </div>
+            <div>
+              <p class="stat-value">99.9%</p>
+              <p class="stat-label">Disponibilité appli</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card--glass highlight" id="login-card" aria-label="Connexion client">
+          <div class="card__header">
+            <div>
+              <p class="eyebrow">Espace sécurisé</p>
+              <h2>Connexion</h2>
+            </div>
+            <div class="badge">Client</div>
+          </div>
+
+          <div class="card__content">
+            <form id="login-form">
+              <div class="field">
+                <label for="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="vous@example.com"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+              <div class="field">
+                <label for="password">Mot de passe</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+              <button type="submit">Se connecter</button>
+              <p id="login-feedback" class="form-feedback" role="status"></p>
+            </form>
+            <div class="trust">
+              <span class="dot"></span>
+              <p class="muted">Vos commandes sont verrouillées après création.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel--light" id="about">
+        <div class="panel__content">
+          <div>
+            <p class="eyebrow">Présentation</p>
+            <h2>Une logistique centrée client, sans compromis</h2>
+            <p class="muted lead">
+              Nous combinons infrastructures locales, partenaires premium et supervision
+              numérique pour garantir ponctualité et visibilité. Chaque livraison est
+              protégée par des contrôles stricts : aucune modification après création,
+              traçabilité complète et authentification sécurisée.
+            </p>
+            <div class="chips">
+              <span class="chip">Réseau national</span>
+              <span class="chip">Support dédié</span>
+              <span class="chip">SLA contractuel</span>
+            </div>
+          </div>
+          <div class="about-grid">
+            <div class="about-card">
+              <p class="eyebrow">Engagement</p>
+              <h3>Excellence opérationnelle</h3>
+              <p class="muted">Processus standardisés, contrôle qualité et monitoring.</p>
+            </div>
+            <div class="about-card">
+              <p class="eyebrow">Sécurité</p>
+              <h3>Données & accès maîtrisés</h3>
+              <p class="muted">Supabase Auth, RLS et séparation client/admin native.</p>
+            </div>
+            <div class="about-card">
+              <p class="eyebrow">Transparence</p>
+              <h3>Visibilité en continu</h3>
+              <p class="muted">Statuts en temps réel et historique détaillé de chaque étape.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cards-grid" id="services">
+        <article class="card card--feature">
+          <div class="icon">⏱️</div>
+          <h3>Création rapide</h3>
+          <p>
+            Enregistrez vos adresses de collecte et de livraison en quelques secondes.
+            Les commandes sont verrouillées dès l'enregistrement pour garantir l'intégrité.
+          </p>
+        </article>
+        <article class="card card--feature">
+          <div class="icon">📡</div>
+          <h3>Suivi temps réel</h3>
+          <p>
+            Les statuts s’actualisent en direct via Supabase Realtime. Aucune action
+            manuelle, aucune page à recharger.
+          </p>
+        </article>
+        <article class="card card--feature">
+          <div class="icon">🔒</div>
+          <h3>Accès sécurisé</h3>
+          <p>
+            Authentification Supabase, règles RLS appliquées et séparation claire entre
+            clients et administrateurs.
+          </p>
+        </article>
+      </section>
+
+      <section class="panel" id="tracking">
+        <div class="panel__content">
+          <div>
+            <p class="eyebrow">Tracking</p>
+            <h2>Une vue claire de chaque étape</h2>
+            <p class="muted">
+              Consultez l’historique des statuts, la date de création, les horaires de
+              collecte et de livraison prévus. Le tout en lecture seule pour préserver
+              la traçabilité.
+            </p>
+            <div class="chips">
+              <span class="chip">Lecture seule</span>
+              <span class="chip">Statuts détaillés</span>
+              <span class="chip">Notifications en direct</span>
+            </div>
+          </div>
+          <div class="panel__mock">
+            <div class="mock-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Commande</p>
+                  <strong>#10245</strong>
+                </div>
+                <span class="badge">en transit</span>
+              </header>
+              <ul>
+                <li><span>Collecte</span><strong>12 Av. des Lilas, Paris</strong></li>
+                <li><span>Livraison</span><strong>5 rue du Port, Nantes</strong></li>
+                <li><span>Dernier statut</span><strong>Colis scanné au hub</strong></li>
+              </ul>
+              <div class="timeline">
+                <div class="dot dot--active"></div>
+                <div class="line"></div>
+                <div class="dot dot--active"></div>
+                <div class="line"></div>
+                <div class="dot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="status-template">
+      <div class="status-list"></div>
+    </template>
+
+    <script type="module">
+      import { redirectIfLoggedIn, setupAuthUI } from './js/auth.js'
+      await redirectIfLoggedIn()
+      setupAuthUI()
+    </script>
+  </body>
+</html>
