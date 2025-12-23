@@ -102,6 +102,11 @@ header.site-header {
   max-width: 560px;
 }
 
+.lead {
+  font-size: 18px;
+  line-height: 1.6;
+}
+
 .cta-row {
   display: flex;
   gap: 12px;
@@ -283,6 +288,10 @@ button:disabled {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(59, 130, 246, 0.04));
 }
 
+.panel--light {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(34, 197, 94, 0.04));
+}
+
 .panel__content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -326,6 +335,19 @@ button:disabled {
 
 .mock-card li strong {
   color: #fff;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.about-card {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .timeline {
