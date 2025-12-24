@@ -358,7 +358,8 @@ const renderOrderDetail = (order) => {
         <select id="driver-select">
           <option value="">Sélectionner</option>
           ${state.drivers
-            .map((driver) => `<option value="${driver.id}">${driver.full_name || driver.email || driver.id}</option>`)
+            .filter((driver) => Boolean(driver.full_name))
+            .map((driver) => `<option value="${driver.id}">${driver.full_name}</option>`)
             .join('')}
         </select>
       </div>
@@ -500,7 +501,9 @@ const fetchDrivers = async () => {
       return
     }
 
-    state.drivers = data || []
+    const driversWithName = (data || []).filter((driver) => Boolean(driver.full_name))
+
+    state.drivers = driversWithName
     renderDrivers()
 
     if (state.activeOrderId && state.ordersCache.has(state.activeOrderId)) {
