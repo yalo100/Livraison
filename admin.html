@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body class="admin-body">
+    <div id="boot-log" class="boot-log">En attente du démarrage...</div>
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar__brand">
@@ -25,7 +26,7 @@
         <nav class="sidebar__nav">
           <button class="nav-btn active" data-target="orders-view">Commandes</button>
           <button class="nav-btn" data-target="drivers-view">Livreurs</button>
-          <button class="nav-btn logout-button" type="button">Déconnexion</button>
+          <button class="nav-btn logout-button" id="logout-btn" type="button">Déconnexion</button>
         </nav>
       </aside>
 
@@ -232,29 +233,74 @@
     <div id="toast" class="toast hidden"></div>
 
     <script type="module">
-      import { requireAdmin, requireAuth, setupLogout } from './js/auth.js'
-      import { initAdmin } from './js/admin.js'
-
-      const auth = await requireAuth()
-
-      if (!auth?.session) {
-        // redirection already handled for non connected users
-        return
+      const bootLogEl = document.getElementById('boot-log')
+      const appendBootLog = (message, isError = false) => {
+        const stamp = new Date().toISOString()
+        const line = document.createElement('div')
+        line.textContent = `[${stamp}] ${message}`
+        line.className = isError ? 'boot-log-line error' : 'boot-log-line'
+        if (bootLogEl) {
+          if (bootLogEl.textContent.includes('En attente du démarrage')) bootLogEl.textContent = ''
+          bootLogEl.appendChild(line)
+        }
+        console[isError ? 'error' : 'info']('[BOOT]', message)
       }
 
-      const adminCheck = await requireAdmin(auth.session)
-      setupLogout()
+      const main = async () => {
+        appendBootLog('BOOT OK – initialisation en cours')
 
-      initAdmin(auth.session, { role: adminCheck.role, allowed: adminCheck.allowed, profile: adminCheck.profile, error: adminCheck.error })
+        let authModule
+        let adminModule
+        try {
+          ;[authModule, adminModule] = await Promise.all([
+            import('./js/auth.js'),
+            import('./js/admin.js'),
+          ])
+        } catch (error) {
+          appendBootLog(`Erreur d\'import : ${error.message}`, true)
+          console.error('Import error', error)
+          return
+        }
 
-      if (!adminCheck.allowed) {
-        document.getElementById('access-denied').classList.remove('hidden')
-        document.querySelectorAll('.view').forEach((section) => section.classList.add('hidden'))
-        return
+        const { requireAdmin, requireAuth, setupLogout } = authModule
+        const { initAdmin, registerGlobalErrorHandlers } = adminModule
+
+        registerGlobalErrorHandlers?.(appendBootLog)
+
+        const auth = await requireAuth([], { redirectOnForbidden: true })
+
+        if (!auth?.session) {
+          appendBootLog('Aucune session active, redirection', true)
+          return
+        }
+
+        const adminCheck = await requireAdmin(auth.session)
+        setupLogout()
+
+        initAdmin(auth.session, {
+          role: adminCheck.role,
+          allowed: adminCheck.allowed,
+          profile: adminCheck.profile,
+          error: adminCheck.error,
+        })
+
+        if (!adminCheck.allowed) {
+          appendBootLog('Accès non admin', true)
+          document.getElementById('access-denied').classList.remove('hidden')
+          document.querySelectorAll('.view').forEach((section) => section.classList.add('hidden'))
+          return
+        }
+
+        const adminUser = document.getElementById('admin-user')
+        if (adminUser) {
+          adminUser.textContent = adminCheck?.profile?.full_name || auth.session.user.email || 'Admin'
+        }
       }
 
-      document.getElementById('admin-user').textContent =
-        adminCheck?.profile?.full_name || auth.session.user.email || 'Admin'
+      main().catch((error) => {
+        appendBootLog(`Erreur fatale : ${error.message}`, true)
+        console.error('Erreur fatale', error)
+      })
     </script>
   </body>
 </html>

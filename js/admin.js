@@ -19,6 +19,7 @@ const diagnostics = {
     lastError: null,
     raw: '',
     sessionResult: null,
+    bootLog: null,
   },
   els: {
     url: document.getElementById('diag-url'),
@@ -29,6 +30,7 @@ const diagnostics = {
     errors: document.getElementById('diag-errors'),
     raw: document.getElementById('diag-raw'),
     testBtn: document.getElementById('diagnostics-test-orders'),
+    bootLog: document.getElementById('boot-log'),
   },
 }
 
@@ -306,7 +308,9 @@ const renderAssignments = (assignments = []) => {
 
 const setActiveView = (targetId = 'orders-view') => {
   els.views.forEach((view) => {
-    view.classList.toggle('active', view.id === targetId)
+    const isActive = view.id === targetId
+    view.classList.toggle('active', isActive)
+    view.classList.toggle('hidden', !isActive)
   })
 }
 
@@ -417,12 +421,10 @@ const buildOrdersQuery = () => {
 
   const search = els.searchFilter?.value?.trim()
   if (search) {
-    const asNumber = Number(search)
-    if (!Number.isNaN(asNumber)) {
-      query = query.eq('id', asNumber)
-    } else {
-      query = query.or(`pickup_address.ilike.%${search}%,delivery_address.ilike.%${search}%`)
-    }
+    const encoded = search.replace(/%/g, '\\%').replace(/_/g, '\\_')
+    query = query.or(
+      `id.ilike.%${encoded}%,pickup_address.ilike.%${encoded}%,delivery_address.ilike.%${encoded}%`
+    )
   }
 
   return query
@@ -488,7 +490,7 @@ const fetchDrivers = async () => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, email, role')
+      .select('id, full_name, phone, role')
       .eq('role', 'driver')
       .order('full_name', { ascending: true })
 
@@ -699,7 +701,7 @@ const bindOrdersTable = () => {
   els.ordersTable.addEventListener('click', (event) => {
     const target = event.target
     if (target instanceof HTMLButtonElement && target.dataset.open) {
-      openOrder(Number(target.dataset.open))
+      openOrder(target.dataset.open)
     }
   })
 }
@@ -735,11 +737,11 @@ const initDiagnostics = async (session, role, adminError) => {
 
   if (diagnostics.els.testBtn && !diagnostics.els.testBtn.dataset.bound) {
     diagnostics.els.testBtn.dataset.bound = 'true'
-    diagnostics.els.testBtn.addEventListener('click', async () => {
-      diagnostics.els.testBtn.disabled = true
-      diagnostics.els.raw.textContent = 'Requête en cours...'
-      const { data, error } = await fetchOrders({ captureRaw: true })
-      diagnostics.els.testBtn.disabled = false
+      diagnostics.els.testBtn.addEventListener('click', async () => {
+        diagnostics.els.testBtn.disabled = true
+        diagnostics.els.raw.textContent = 'Requête en cours...'
+        const { data, error } = await fetchOrders({ captureRaw: true })
+        diagnostics.els.testBtn.disabled = false
 
       const payload = {
         count: data?.length || 0,
@@ -763,6 +765,10 @@ const initDiagnostics = async (session, role, adminError) => {
 
 export const initAdmin = (session, { role = '—', allowed = true, profile = null, error = null } = {}) => {
   state.session = session
+  updateDiagnostics({
+    sessionText: session ? JSON.stringify({ user: session.user }, null, 2) : '—',
+    role: role || diagnostics.state.role,
+  })
   setDetailMessage('Sélectionnez une commande pour afficher le détail.')
   setActiveView('orders-view')
   bindNavigation()
@@ -786,4 +792,16 @@ export const initAdmin = (session, { role = '—', allowed = true, profile = nul
   fetchDrivers()
   fetchOrders({ captureRaw: true })
   handleRealtime()
+}
+
+export const registerGlobalErrorHandlers = (appendBootLog) => {
+  const reportError = (label, errorEvent) => {
+    const error = errorEvent?.error || errorEvent?.reason || errorEvent
+    const formatted = formatError(error)
+    updateDiagnostics({ lastError: formatted || label })
+    if (appendBootLog) appendBootLog(`${label}: ${formatted || 'Unknown error'}`, true)
+  }
+
+  window.addEventListener('error', (event) => reportError('Erreur globale', event))
+  window.addEventListener('unhandledrejection', (event) => reportError('Rejet promesse', event))
 }

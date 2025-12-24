@@ -153,7 +153,13 @@ export async function requireAdmin(session) {
 }
 
 export function setupLogout(buttonSelector = '.logout-button') {
-  document.querySelectorAll(buttonSelector).forEach((button) => {
+  const buttons = new Set([
+    ...document.querySelectorAll(buttonSelector),
+    ...document.querySelectorAll('#logout-btn'),
+  ])
+
+  buttons.forEach((button) => {
+    if (!(button instanceof HTMLElement)) return
     button.addEventListener('click', async () => {
       button.disabled = true
       button.textContent = 'Déconnexion...'
