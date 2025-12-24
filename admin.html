@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Livraison – Dashboard Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body class="admin-body">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <div class="mark">🚚</div>
+          <div>
+            <strong>Livraison</strong>
+            <p class="muted">Admin</p>
+          </div>
+        </div>
+        <nav class="sidebar__nav">
+          <button class="nav-btn active" data-target="orders-view">Commandes</button>
+          <button class="nav-btn" data-target="drivers-view">Livreurs</button>
+          <button class="nav-btn logout-button" type="button">Déconnexion</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Administration</p>
+            <h1 id="page-title">Commandes</h1>
+          </div>
+          <div class="user-chip" id="admin-user">Admin</div>
+        </header>
+
+        <section id="access-denied" class="card hidden">
+          <h2>Accès refusé</h2>
+          <p class="muted">Votre compte n'est pas autorisé à accéder au dashboard admin.</p>
+          <button class="logout-button" type="button">Se déconnecter</button>
+        </section>
+
+        <section id="orders-view" class="view active">
+          <div class="card filters">
+            <div class="field-inline">
+              <label for="status-filter">Statut</label>
+              <select id="status-filter">
+                <option value="all">Tous</option>
+                <option value="created">Créé</option>
+                <option value="assigned">Assigné</option>
+                <option value="in_transit">En transit</option>
+                <option value="delivered">Livré</option>
+                <option value="cancelled">Annulé</option>
+              </select>
+            </div>
+            <div class="field-inline">
+              <label for="assignment-filter">Assignation</label>
+              <select id="assignment-filter">
+                <option value="all">Toutes</option>
+                <option value="assigned">Assignées</option>
+                <option value="unassigned">Non assignées</option>
+              </select>
+            </div>
+            <div class="field-inline grow">
+              <label for="search-filter">Recherche</label>
+              <input id="search-filter" type="search" placeholder="ID ou adresse" />
+            </div>
+            <button id="refresh-orders" class="ghost-btn">Rafraîchir</button>
+          </div>
+
+          <div class="card table-card">
+            <div class="table-head">
+              <h2>Commandes</h2>
+              <p id="orders-count" class="muted"></p>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Client</th>
+                    <th>Livreur</th>
+                    <th>Statut</th>
+                    <th>Créée</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="orders-table"></tbody>
+              </table>
+            </div>
+            <div id="orders-empty" class="empty hidden">Aucune commande trouvée.</div>
+          </div>
+
+          <div id="order-detail" class="card hidden"></div>
+        </section>
+
+        <section id="drivers-view" class="view">
+          <div class="card table-card">
+            <div class="table-head">
+              <h2>Livreurs</h2>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Téléphone</th>
+                    <th>ID</th>
+                    <th>Assignées</th>
+                    <th>En cours</th>
+                    <th>Livrées</th>
+                  </tr>
+                </thead>
+                <tbody id="drivers-table"></tbody>
+              </table>
+            </div>
+            <div id="drivers-empty" class="empty hidden">Aucun livreur trouvé.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module">
+      import { requireAuth, setupLogout } from './js/auth.js'
+      import { initAdmin } from './js/admin.js'
+
+      const auth = await requireAuth(['admin'], { redirectOnForbidden: false })
+
+      if (!auth?.session) {
+        // redirection already handled for non connected users
+        return
+      }
+
+      if (!auth.allowed) {
+        document.getElementById('access-denied').classList.remove('hidden')
+        document.querySelectorAll('.view').forEach((section) => section.classList.add('hidden'))
+        setupLogout()
+        return
+      }
+
+      document.getElementById('admin-user').textContent = auth.session.user.email || 'Admin'
+      setupLogout()
+      initAdmin(auth.session)
+    </script>
+  </body>
+</html>
