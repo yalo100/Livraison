@@ -23,6 +23,7 @@ const searchFilter = document.getElementById('search-filter')
 const refreshOrdersBtn = document.getElementById('refresh-orders')
 
 const toast = document.getElementById('toast')
+const views = document.querySelectorAll('.view')
 
 const formatDate = (value) => {
   if (!value) return '—'
@@ -41,18 +42,31 @@ const badge = (text) => `<span class="badge">${text}</span>`
 
 const shortId = (id) => `#${id}`
 
+const setOrdersLoading = (isLoading) => {
+  if (!ordersTable) return
+  ordersTable.classList.toggle('loading', isLoading)
+  refreshOrdersBtn && (refreshOrdersBtn.disabled = isLoading)
+}
+
+const setDetailMessage = (message) => {
+  if (!orderDetail) return
+  orderDetail.classList.remove('hidden')
+  orderDetail.innerHTML = `<p class="muted">${message}</p>`
+}
+
 const renderOrders = () => {
   ordersTable.innerHTML = ''
   const list = state.orders
 
   if (!list.length) {
-    ordersEmpty.classList.remove('hidden')
-    ordersCount.textContent = '0 commande'
+    ordersEmpty?.classList.remove('hidden')
+    if (ordersCount) ordersCount.textContent = '0 commande'
+    orderDetail?.classList.add('hidden')
     return
   }
 
-  ordersEmpty.classList.add('hidden')
-  ordersCount.textContent = `${list.length} commande${list.length > 1 ? 's' : ''}`
+  ordersEmpty?.classList.add('hidden')
+  if (ordersCount) ordersCount.textContent = `${list.length} commande${list.length > 1 ? 's' : ''}`
 
   list.forEach((order) => {
     const row = document.createElement('tr')
@@ -158,7 +172,7 @@ const renderAssignments = (assignments = []) => {
 
 const renderOrderDetail = (order) => {
   if (!order) {
-    orderDetail.classList.add('hidden')
+    setDetailMessage('Sélectionnez une commande pour afficher le détail.')
     return
   }
 
@@ -250,6 +264,8 @@ const renderOrderDetail = (order) => {
 }
 
 const fetchOrders = async () => {
+  setOrdersLoading(true)
+
   let query = supabase
     .from('orders')
     .select(
@@ -282,10 +298,12 @@ const fetchOrders = async () => {
   }
 
   const { data, error } = await query
+  setOrdersLoading(false)
 
   if (error) {
-    showToast("Erreur lors du chargement des commandes", 'error')
+    showToast('Erreur lors du chargement des commandes', 'error')
     console.error(error)
+    ordersEmpty?.classList.remove('hidden')
     return
   }
 
@@ -429,7 +447,7 @@ const bindNavigation = () => {
       document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'))
       btn.classList.add('active')
 
-      document.querySelectorAll('.view').forEach((view) => {
+      views.forEach((view) => {
         view.classList.toggle('active', view.id === target)
       })
 
@@ -444,12 +462,20 @@ const bindNavigation = () => {
 }
 
 const bindFilters = () => {
-  ;[statusFilter, assignmentFilter, searchFilter].forEach((el) => {
+  ;[statusFilter, assignmentFilter].forEach((el) => {
     el?.addEventListener('change', fetchOrders)
-    el?.addEventListener('keyup', (e) => {
+  })
+
+  if (searchFilter) {
+    let debounce
+    searchFilter.addEventListener('input', () => {
+      clearTimeout(debounce)
+      debounce = setTimeout(fetchOrders, 250)
+    })
+    searchFilter.addEventListener('keyup', (e) => {
       if (e.key === 'Enter') fetchOrders()
     })
-  })
+  }
   refreshOrdersBtn?.addEventListener('click', fetchOrders)
 
   ordersTable.addEventListener('click', (event) => {
