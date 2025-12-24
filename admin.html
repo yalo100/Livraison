@@ -38,6 +38,48 @@
           <div class="user-chip" id="admin-user">Admin</div>
         </header>
 
+        <section id="diagnostics-panel" class="card diagnostics-card">
+          <div class="card__header">
+            <div>
+              <p class="eyebrow">Diagnostics</p>
+              <h2>Statut Supabase & données</h2>
+            </div>
+            <div class="action-row">
+              <button id="diagnostics-test-orders" class="ghost-btn">Test fetch orders</button>
+            </div>
+          </div>
+          <div class="diagnostics-grid">
+            <div class="diag-item">
+              <p class="label">URL actuelle</p>
+              <code id="diag-url" class="diag-block"></code>
+            </div>
+            <div class="diag-item">
+              <p class="label">Client Supabase</p>
+              <span id="diag-supabase" class="pill pill-muted">?</span>
+            </div>
+            <div class="diag-item">
+              <p class="label">Session (auth.getSession)</p>
+              <pre id="diag-session" class="diag-block diag-pre">—</pre>
+            </div>
+            <div class="diag-item">
+              <p class="label">Rôle (profiles.role)</p>
+              <span id="diag-role" class="pill pill-muted">—</span>
+            </div>
+            <div class="diag-item">
+              <p class="label">Commandes récupérées</p>
+              <span id="diag-orders" class="pill pill-muted">—</span>
+            </div>
+            <div class="diag-item">
+              <p class="label">Dernière erreur</p>
+              <div id="diag-errors" class="diag-error diag-block">—</div>
+            </div>
+          </div>
+          <div class="diag-raw">
+            <p class="label">Résultat brut (orders)</p>
+            <pre id="diag-raw" class="diag-block diag-pre">Cliquez sur “Test fetch orders”.</pre>
+          </div>
+        </section>
+
         <section class="card hero-card">
           <div class="card__header">
             <div>
@@ -129,15 +171,17 @@
                 </div>
                 <p id="orders-count" class="muted"></p>
               </div>
+              <div id="orders-error" class="alert hidden"></div>
               <div class="table-wrapper">
                 <table>
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Client</th>
-                      <th>Livreur</th>
                       <th>Statut</th>
                       <th>Créée</th>
+                      <th>Collecte</th>
+                      <th>Livraison</th>
+                      <th>Livreur</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -188,26 +232,29 @@
     <div id="toast" class="toast hidden"></div>
 
     <script type="module">
-      import { requireAuth, setupLogout } from './js/auth.js'
+      import { requireAdmin, requireAuth, setupLogout } from './js/auth.js'
       import { initAdmin } from './js/admin.js'
 
-      const auth = await requireAuth(['admin'], { redirectOnForbidden: false })
+      const auth = await requireAuth()
 
       if (!auth?.session) {
         // redirection already handled for non connected users
         return
       }
 
-      if (!auth.allowed) {
+      const adminCheck = await requireAdmin(auth.session)
+      setupLogout()
+
+      initAdmin(auth.session, { role: adminCheck.role, allowed: adminCheck.allowed, profile: adminCheck.profile, error: adminCheck.error })
+
+      if (!adminCheck.allowed) {
         document.getElementById('access-denied').classList.remove('hidden')
         document.querySelectorAll('.view').forEach((section) => section.classList.add('hidden'))
-        setupLogout()
         return
       }
 
-      document.getElementById('admin-user').textContent = auth.session.user.email || 'Admin'
-      setupLogout()
-      initAdmin(auth.session)
+      document.getElementById('admin-user').textContent =
+        adminCheck?.profile?.full_name || auth.session.user.email || 'Admin'
     </script>
   </body>
 </html>

@@ -23,14 +23,19 @@ const loginUrl = () => buildUrl('index.html')
 export async function fetchUserRole(userId) {
   if (!userId) return 'client'
 
-  const baseQuery = supabase.from('profiles').select('role').eq('id', userId)
-  const { data, error } = await (baseQuery.maybeSingle ? baseQuery.maybeSingle() : baseQuery.single())
+  try {
+    const baseQuery = supabase.from('profiles').select('role').eq('id', userId)
+    const { data, error } = await (baseQuery.maybeSingle ? baseQuery.maybeSingle() : baseQuery.single())
 
-  if (error) {
-    console.warn('Unable to fetch user role, fallback to client', error)
+    if (error) {
+      console.warn('Unable to fetch user role, fallback to client', error)
+    }
+
+    return data?.role || 'client'
+  } catch (error) {
+    console.error('fetchUserRole: unexpected error', error)
+    return 'client'
   }
-
-  return data?.role || 'client'
 }
 
 export async function redirectIfLoggedIn() {
@@ -45,27 +50,35 @@ export async function redirectIfLoggedIn() {
 }
 
 export async function requireAuth(allowedRoles = [], { redirectOnForbidden = true } = {}) {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
 
-  if (!session) {
-    window.location.href = loginUrl()
-    return null
-  }
-
-  const role = await fetchUserRole(session.user.id)
-
-  if (allowedRoles.length && !allowedRoles.includes(role)) {
-    if (redirectOnForbidden) {
-      window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
-      return null
+    if (error) {
+      console.error('auth.getSession error', error)
     }
 
-    return { session, role, allowed: false }
-  }
+    if (!session) {
+      window.location.href = loginUrl()
+      return { session: null, role: null, allowed: false, error }
+    }
 
-  return { session, role, allowed: true }
+    const role = await fetchUserRole(session.user.id)
+    const allowed = !allowedRoles.length || allowedRoles.includes(role)
+
+    if (!allowed && redirectOnForbidden) {
+      window.location.href = role === 'admin' ? adminDashboardUrl() : dashboardUrl()
+      return { session, role, allowed: false, error }
+    }
+
+    return { session, role, allowed, error }
+  } catch (error) {
+    console.error('requireAuth failure', error)
+    window.location.href = loginUrl()
+    return { session: null, role: null, allowed: false, error }
+  }
 }
 
 export function setupAuthUI() {
@@ -111,6 +124,32 @@ export function setupAuthUI() {
       })
     }, 600)
   })
+}
+
+export async function requireAdmin(session) {
+  const base = { allowed: false, role: null, profile: null, error: null }
+
+  if (!session) {
+    return { ...base, error: new Error('Aucune session active') }
+  }
+
+  try {
+    const query = supabase.from('profiles').select('id, role, full_name, phone').eq('id', session.user.id)
+    const { data, error } = await (query.maybeSingle ? query.maybeSingle() : query.single())
+
+    if (error) {
+      console.error('requireAdmin: impossible de récupérer le profil', error)
+      return { ...base, role: data?.role || null, profile: data || null, error }
+    }
+
+    const role = data?.role || 'client'
+    const allowed = role === 'admin'
+    const errorForRole = allowed ? null : new Error('Utilisateur non administrateur')
+    return { allowed, role, profile: data || null, error: errorForRole }
+  } catch (error) {
+    console.error('requireAdmin: erreur inattendue', error)
+    return { ...base, error }
+  }
 }
 
 export function setupLogout(buttonSelector = '.logout-button') {

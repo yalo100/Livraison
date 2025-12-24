@@ -644,6 +644,22 @@ td {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.pill-success {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.pill-error {
+  color: #fecdd3;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.pill-muted {
+  color: var(--muted);
+}
+
 .toast {
   position: fixed;
   bottom: 20px;
@@ -785,6 +801,62 @@ td {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.diagnostics-card {
+  margin-bottom: 16px;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.diag-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diag-block {
+  display: block;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.diag-pre {
+  white-space: pre-wrap;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.diag-error {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.diag-error.has-error {
+  color: #fecdd3;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.diag-raw {
+  margin-top: 12px;
+}
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fecdd3;
 }
 
 .empty {

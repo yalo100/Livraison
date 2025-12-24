@@ -9,11 +9,35 @@ const state = {
   realtime: null,
 }
 
+const diagnostics = {
+  state: {
+    supabaseReady: !!supabase,
+    url: window.location.href,
+    sessionText: '—',
+    role: '—',
+    ordersCount: '—',
+    lastError: null,
+    raw: '',
+    sessionResult: null,
+  },
+  els: {
+    url: document.getElementById('diag-url'),
+    supabase: document.getElementById('diag-supabase'),
+    session: document.getElementById('diag-session'),
+    role: document.getElementById('diag-role'),
+    orders: document.getElementById('diag-orders'),
+    errors: document.getElementById('diag-errors'),
+    raw: document.getElementById('diag-raw'),
+    testBtn: document.getElementById('diagnostics-test-orders'),
+  },
+}
+
 const els = {
   ordersTable: document.getElementById('orders-table'),
   ordersEmpty: document.getElementById('orders-empty'),
   ordersCount: document.getElementById('orders-count'),
   orderDetail: document.getElementById('order-detail'),
+  ordersError: document.getElementById('orders-error'),
   driversTable: document.getElementById('drivers-table'),
   driversEmpty: document.getElementById('drivers-empty'),
   statusFilter: document.getElementById('status-filter'),
@@ -39,6 +63,68 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString()
 }
 
+const formatError = (error) => {
+  if (!error) return null
+  if (typeof error === 'string') return error
+  const code = error.code ? `${error.code} – ` : ''
+  if (error.message) return `${code}${error.message}`
+  try {
+    return `${code}${JSON.stringify(error)}`
+  } catch (jsonError) {
+    console.error('formatError: unable to stringify error', jsonError)
+  }
+  return String(error)
+}
+
+const updateDiagnostics = (partial = {}) => {
+  diagnostics.state = {
+    ...diagnostics.state,
+    ...partial,
+    url: window.location.href,
+    supabaseReady: !!supabase,
+  }
+
+  const { state, els } = diagnostics
+
+  if (els.url) els.url.textContent = state.url || window.location.href
+  if (els.supabase) {
+    els.supabase.textContent = state.supabaseReady ? 'OK' : 'KO'
+    els.supabase.className = `pill ${state.supabaseReady ? 'pill-success' : 'pill-error'}`
+  }
+  if (els.session) els.session.textContent = state.sessionText || '—'
+  if (els.role) els.role.textContent = state.role || '—'
+  if (els.orders) els.orders.textContent = `${state.ordersCount ?? '—'}`
+  if (els.errors) {
+    const hasError = Boolean(state.lastError)
+    els.errors.textContent = hasError ? state.lastError : 'Aucune'
+    els.errors.classList.toggle('has-error', hasError)
+  }
+  if (els.raw) els.raw.textContent = state.raw || '—'
+
+  console.groupCollapsed('Diagnostics admin')
+  console.log('URL', state.url)
+  console.log('Supabase ready', state.supabaseReady)
+  console.log('Session result', state.sessionResult)
+  console.log('Role', state.role)
+  console.log('Orders count', state.ordersCount)
+  if (state.lastError) console.error('Dernière erreur', state.lastError)
+  if (state.raw) console.log('Aperçu brut', state.raw)
+  console.groupEnd()
+}
+
+const recordError = (context, error) => {
+  const formatted = formatError(error)
+  updateDiagnostics({ lastError: formatted })
+  console.error(`Supabase error in ${context}`, error)
+  return formatted
+}
+
+const setOrdersError = (message = '') => {
+  if (!els.ordersError) return
+  els.ordersError.textContent = message
+  els.ordersError.classList.toggle('hidden', !message)
+}
+
 const showToast = (message, variant = 'info') => {
   if (!els.toast) return
   els.toast.textContent = message
@@ -58,6 +144,7 @@ const setOrdersLoading = (isLoading) => {
   ;[els.refreshOrdersBtn, els.refreshDriversBtn, els.refreshDriversSecondaryBtn].forEach((btn) => {
     if (btn) btn.disabled = isLoading
   })
+  if (diagnostics.els.testBtn) diagnostics.els.testBtn.disabled = isLoading
 }
 
 const setDetailMessage = (message) => {
@@ -101,6 +188,7 @@ const renderOrders = () => {
   if (!list.length) {
     els.ordersEmpty.classList.remove('hidden')
     els.ordersCount.textContent = '0 commande'
+    setOrdersError('')
     state.activeOrderId = null
     setDetailMessage('Aucune commande pour le moment. Créez-en ou attendez une nouvelle entrée Supabase.')
     updateMetrics()
@@ -109,15 +197,17 @@ const renderOrders = () => {
 
   els.ordersEmpty.classList.add('hidden')
   els.ordersCount.textContent = `${list.length} commande${list.length > 1 ? 's' : ''}`
+  setOrdersError('')
 
   list.forEach((order) => {
     const row = document.createElement('tr')
     row.innerHTML = `
       <td>${shortId(order.id)}</td>
-      <td>${order.profiles?.email || order.user_id || '—'}</td>
-      <td>${order.driver?.email || order.driver_id || '—'}</td>
       <td>${badge(order.current_status || '—')}</td>
       <td>${formatDate(order.created_at)}</td>
+      <td>${order.pickup_address || '—'}</td>
+      <td>${order.delivery_address || '—'}</td>
+      <td>${order.driver_id || '—'}</td>
       <td class="table-actions"><button data-open="${order.id}" class="ghost-btn">Ouvrir</button></td>
     `
     els.ordersTable.appendChild(row)
@@ -212,6 +302,12 @@ const renderAssignments = (assignments = []) => {
     })
 
   return container
+}
+
+const setActiveView = (targetId = 'orders-view') => {
+  els.views.forEach((view) => {
+    view.classList.toggle('active', view.id === targetId)
+  })
 }
 
 const renderOrderDetail = (order) => {
@@ -310,14 +406,7 @@ const renderOrderDetail = (order) => {
 }
 
 const buildOrdersQuery = () => {
-  const columns = `id, user_id, driver_id, pickup_address, delivery_address, expected_pickup, expected_delivery, current_status, created_at,
-    profiles:user_id (email, full_name),
-    driver:driver_id (email, full_name),
-    order_status_events (id, status, reason, note, performed_by, created_at),
-    scan_proofs (id, scan_type, scan_payload, image_url, note, performed_by, created_at),
-    driver_assignments (id, driver_id, assigned_by, assigned_at, unassigned_at, note, driver:driver_id (email, full_name))`
-
-  let query = supabase.from('orders').select(columns).order('created_at', { ascending: false })
+  let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
 
   const status = els.statusFilter?.value
   if (status && status !== 'all') query = query.eq('current_status', status)
@@ -339,34 +428,48 @@ const buildOrdersQuery = () => {
   return query
 }
 
-const fetchOrders = async () => {
-  setOrdersLoading(true)
-
-  let { data, error } = await buildOrdersQuery()
-
-  if (error) {
-    console.warn('Full query failed, fallback to minimal select', error)
-    const fallback = await supabase
-      .from('orders')
-      .select('id, user_id, driver_id, pickup_address, delivery_address, expected_pickup, expected_delivery, current_status, created_at')
-      .order('created_at', { ascending: false })
-
-    data = fallback.data
-    error = fallback.error
+const runOrdersQuery = async () => {
+  try {
+    const query = buildOrdersQuery()
+    const { data, error } = await query
+    return { data: data || [], error }
+  } catch (error) {
+    return { data: [], error }
   }
+}
 
+const fetchOrders = async ({ captureRaw = false } = {}) => {
+  setOrdersLoading(true)
+  const { data, error } = await runOrdersQuery()
   setOrdersLoading(false)
 
   if (error) {
-    showToast('Erreur lors du chargement des commandes', 'error')
-    console.error(error)
+    const message = recordError('fetchOrders', error)
+    const isRls = error?.code === '42501' || /permission|rls/i.test(error?.message || '')
+    const uiMessage = isRls
+      ? 'RLS / permissions : vérifiez les politiques et le rôle.'
+      : 'Erreur lors du chargement des commandes.'
+    setOrdersError(uiMessage)
     els.ordersEmpty?.classList.remove('hidden')
-    return
+    els.ordersEmpty.textContent = 'Impossible de récupérer les commandes.'
+    updateDiagnostics({ ordersCount: 0 })
+    showToast(uiMessage, 'error')
+    return { data: [], error }
   }
 
   state.orders = data || []
   state.ordersCache.clear()
   state.orders.forEach((o) => state.ordersCache.set(o.id, o))
+  const rawPreview =
+    captureRaw && Array.isArray(state.orders)
+      ? JSON.stringify({ preview: state.orders.slice(0, 2), count: state.orders.length }, null, 2)
+      : diagnostics.state.raw
+
+  updateDiagnostics({
+    ordersCount: state.orders.length,
+    lastError: null,
+    raw: rawPreview,
+  })
   renderOrders()
 
   if (!state.activeOrderId && state.orders.length) {
@@ -378,52 +481,63 @@ const fetchOrders = async () => {
   }
 
   updateMetrics()
+  return { data: state.orders, error: null }
 }
 
 const fetchDrivers = async () => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, phone, email, role')
-    .eq('role', 'driver')
-    .order('full_name', { ascending: true })
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone, email, role')
+      .eq('role', 'driver')
+      .order('full_name', { ascending: true })
 
-  if (error) {
-    console.error(error)
-    showToast('Erreur lors du chargement des livreurs', 'error')
-    return
-  }
+    if (error) {
+      recordError('fetchDrivers', error)
+      showToast('Erreur lors du chargement des livreurs', 'error')
+      return
+    }
 
-  state.drivers = data || []
-  renderDrivers()
+    state.drivers = data || []
+    renderDrivers()
 
-  if (state.activeOrderId && state.ordersCache.has(state.activeOrderId)) {
-    renderOrderDetail(state.ordersCache.get(state.activeOrderId))
+    if (state.activeOrderId && state.ordersCache.has(state.activeOrderId)) {
+      renderOrderDetail(state.ordersCache.get(state.activeOrderId))
+    }
+  } catch (error) {
+    recordError('fetchDrivers', error)
+    showToast('Erreur inattendue lors du chargement des livreurs', 'error')
   }
 }
 
 const fetchDriverStats = async () => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('driver_id, current_status')
-    .not('driver_id', 'is', null)
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('driver_id, current_status')
+      .not('driver_id', 'is', null)
 
-  if (error) {
-    console.error(error)
+    if (error) {
+      recordError('fetchDriverStats', error)
+      return new Map()
+    }
+
+    const stats = new Map()
+    data.forEach((order) => {
+      if (!stats.has(order.driver_id)) {
+        stats.set(order.driver_id, { assigned: 0, in_progress: 0, delivered: 0 })
+      }
+      const entry = stats.get(order.driver_id)
+      entry.assigned += 1
+      if (order.current_status === 'delivered') entry.delivered += 1
+      else entry.in_progress += 1
+    })
+
+    return stats
+  } catch (error) {
+    recordError('fetchDriverStats', error)
     return new Map()
   }
-
-  const stats = new Map()
-  data.forEach((order) => {
-    if (!stats.has(order.driver_id)) {
-      stats.set(order.driver_id, { assigned: 0, in_progress: 0, delivered: 0 })
-    }
-    const entry = stats.get(order.driver_id)
-    entry.assigned += 1
-    if (order.current_status === 'delivered') entry.delivered += 1
-    else entry.in_progress += 1
-  })
-
-  return stats
 }
 
 const renderDrivers = async () => {
@@ -462,32 +576,46 @@ const openOrder = async (id) => {
 }
 
 const assignDriver = async (orderId, driverId) => {
-  const { error: updateError } = await supabase
-    .from('orders')
-    .update({ driver_id: driverId })
-    .eq('id', orderId)
+  try {
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ driver_id: driverId })
+      .eq('id', orderId)
 
-  if (updateError) return { error: updateError }
+    if (updateError) {
+      recordError('assignDriver:update', updateError)
+      return { error: updateError }
+    }
 
-  const { error: assignError } = await supabase.from('driver_assignments').insert({
-    order_id: orderId,
-    driver_id: driverId,
-    assigned_by: state.session.user.id,
-    assigned_at: new Date().toISOString(),
-    note: 'Assigné par admin',
-  })
+    const { error: assignError } = await supabase.from('driver_assignments').insert({
+      order_id: orderId,
+      driver_id: driverId,
+      assigned_by: state.session.user.id,
+      assigned_at: new Date().toISOString(),
+      note: 'Assigné par admin',
+    })
 
-  if (assignError) return { error: assignError }
+    if (assignError) {
+      recordError('assignDriver:insert-assignment', assignError)
+      return { error: assignError }
+    }
 
-  const { error: statusError } = await supabase.from('order_status_events').insert({
-    order_id: orderId,
-    status: 'assigned',
-    reason: 'system',
-    note: 'Assigned by admin',
-    performed_by: state.session.user.id,
-  })
+    const { error: statusError } = await supabase.from('order_status_events').insert({
+      order_id: orderId,
+      status: 'assigned',
+      reason: 'system',
+      note: 'Assigned by admin',
+      performed_by: state.session.user.id,
+    })
 
-  return { error: statusError }
+    if (statusError) {
+      recordError('assignDriver:insert-status', statusError)
+    }
+    return { error: statusError }
+  } catch (error) {
+    recordError('assignDriver:unexpected', error)
+    return { error }
+  }
 }
 
 const handleRealtime = () => {
@@ -524,6 +652,7 @@ const handleRealtime = () => {
 
 const bindNavigation = () => {
   document.querySelectorAll('.nav-btn').forEach((btn) => {
+    btn.setAttribute('type', 'button')
     btn.addEventListener('click', () => {
       const target = btn.dataset.target
       if (btn.classList.contains('logout-button')) return
@@ -531,9 +660,7 @@ const bindNavigation = () => {
       document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'))
       btn.classList.add('active')
 
-      els.views.forEach((view) => {
-        view.classList.toggle('active', view.id === target)
-      })
+      setActiveView(target || 'orders-view')
 
       const title = target === 'drivers-view' ? 'Livreurs' : 'Commandes'
       const pageTitle = document.getElementById('page-title')
@@ -541,7 +668,9 @@ const bindNavigation = () => {
 
       if (target === 'drivers-view') {
         fetchDrivers()
+        return
       }
+      fetchOrders()
     })
   })
 }
@@ -587,14 +716,74 @@ const bindQuickActions = () => {
   })
 }
 
-export const initAdmin = (session) => {
+const initDiagnostics = async (session, role, adminError) => {
+  updateDiagnostics({
+    role: role || diagnostics.state.role,
+    lastError: formatError(adminError),
+  })
+  if (diagnostics.els.url) diagnostics.els.url.textContent = window.location.href
+
+  try {
+    const sessionResult = await supabase.auth.getSession()
+    updateDiagnostics({
+      sessionResult: sessionResult.data,
+      sessionText: JSON.stringify(sessionResult.data, null, 2),
+    })
+  } catch (error) {
+    recordError('initDiagnostics', error)
+  }
+
+  if (diagnostics.els.testBtn && !diagnostics.els.testBtn.dataset.bound) {
+    diagnostics.els.testBtn.dataset.bound = 'true'
+    diagnostics.els.testBtn.addEventListener('click', async () => {
+      diagnostics.els.testBtn.disabled = true
+      diagnostics.els.raw.textContent = 'Requête en cours...'
+      const { data, error } = await fetchOrders({ captureRaw: true })
+      diagnostics.els.testBtn.disabled = false
+
+      const payload = {
+        count: data?.length || 0,
+        preview: (data || []).slice(0, 2),
+        error: error ? formatError(error) : null,
+      }
+      updateDiagnostics({
+        raw: JSON.stringify(payload, null, 2),
+        lastError: formatError(error),
+        ordersCount: data?.length ?? diagnostics.state.ordersCount,
+      })
+
+      if (error) {
+        showToast('Erreur lors du test fetch orders', 'error')
+      } else {
+        showToast('Test fetch orders OK', 'success')
+      }
+    })
+  }
+}
+
+export const initAdmin = (session, { role = '—', allowed = true, profile = null, error = null } = {}) => {
   state.session = session
   setDetailMessage('Sélectionnez une commande pour afficher le détail.')
+  setActiveView('orders-view')
   bindNavigation()
   bindFilters()
   bindOrdersTable()
   bindQuickActions()
+  initDiagnostics(session, role, error)
+
+  if (!allowed) {
+    updateDiagnostics({
+      lastError: formatError(error) || 'Accès refusé : rôle non admin',
+      ordersCount: 0,
+    })
+    return
+  }
+
+  if (profile?.full_name) {
+    console.info('Connecté en tant que', profile.full_name)
+  }
+
   fetchDrivers()
-  fetchOrders()
+  fetchOrders({ captureRaw: true })
   handleRealtime()
 }
