@@ -3,89 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Livraison – Tableau de bord admin</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <title>Livraison – Dashboard admin</title>
+    <meta http-equiv="refresh" content="0; url=./admin.html" />
     <link rel="stylesheet" href="./css/style.css" />
   </head>
-  <body>
-    <header class="site-header">
-      <div class="logo">
-        <div class="mark">🚚</div>
-        <span>Livraison Admin</span>
+  <body class="admin-body">
+    <main style="max-width: 720px; margin: 80px auto; padding: 24px">
+      <div class="card">
+        <h1>Redirection vers le nouveau dashboard</h1>
+        <p class="muted">
+          Cette page a été remplacée par une interface plus complète. Vous allez être redirigé
+          automatiquement vers <strong>admin.html</strong>.
+        </p>
+        <a class="button" href="./admin.html">Accéder au dashboard</a>
       </div>
-      <div class="toolbar">
-        <div class="avatar" id="user-avatar">AD</div>
-        <div>
-          <p class="muted">Administrateur</p>
-          <strong id="user-email">—</strong>
-        </div>
-        <button class="logout-button">Déconnexion</button>
-      </div>
-    </header>
-
-    <main>
-      <div class="dashboard-header">
-        <div class="dashboard-header__top">
-          <div>
-            <p class="eyebrow">Commandes</p>
-            <h1>Superviser toutes les livraisons</h1>
-          </div>
-          <div class="chips">
-            <span class="chip">Vue admin</span>
-            <span class="chip">Temps réel</span>
-            <span class="chip">Lecture seule</span>
-          </div>
-        </div>
-        <div class="info-banner">
-          <strong>Info :</strong>
-          <span>
-            Les commandes sont verrouillées côté client. Cette vue admin permet de suivre
-            l'ensemble du flux sans modifier les enregistrements.
-          </span>
-        </div>
-      </div>
-
-      <section style="margin-top: 12px">
-        <header class="card__header" style="margin-bottom: 10px">
-          <div>
-            <p class="eyebrow">Monitoring</p>
-            <h2>Toutes les commandes</h2>
-          </div>
-        </header>
-        <div id="admin-empty-state" class="empty hidden">
-          <p>Aucune commande enregistrée pour le moment.</p>
-        </div>
-        <div id="admin-orders-list" class="orders-grid" aria-live="polite"></div>
-      </section>
     </main>
-
-    <template id="status-template">
-      <div class="status-list"></div>
-    </template>
-
-    <script type="module">
-      import { requireAuth, setupLogout } from './js/auth.js'
-      import { initAdminOrders } from './js/admin.js'
-
-      ;(async () => {
-        const auth = await requireAuth(['admin'])
-        if (!auth?.session) return
-
-        const email = auth.session.user.email || 'Admin'
-        document.getElementById('user-email').textContent = email
-        document.getElementById('user-avatar').textContent = email
-          .split('@')[0]
-          .slice(0, 2)
-          .toUpperCase()
-
-        setupLogout()
-        initAdminOrders()
-      })()
+    <script>
+      window.location.replace('./admin.html')
     </script>
   </body>
 </html>

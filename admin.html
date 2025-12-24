@@ -33,10 +33,41 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">Administration</p>
-            <h1 id="page-title">Commandes</h1>
+            <h1 id="page-title">Supervision</h1>
           </div>
           <div class="user-chip" id="admin-user">Admin</div>
         </header>
+
+        <section class="card hero-card">
+          <div class="card__header">
+            <div>
+              <p class="eyebrow">Vision globale</p>
+              <h2>Tableau de bord en temps réel</h2>
+              <p class="muted">
+                Suivez toutes les commandes, assignez les livreurs et surveillez les statuts en direct.
+              </p>
+            </div>
+            <div class="pill" id="last-sync">Dernière sync : —</div>
+          </div>
+          <div class="stats-grid">
+            <article class="stat-card">
+              <p class="muted">Commandes totales</p>
+              <h3 id="metric-total">—</h3>
+            </article>
+            <article class="stat-card">
+              <p class="muted">Assignées</p>
+              <h3 id="metric-assigned">—</h3>
+            </article>
+            <article class="stat-card">
+              <p class="muted">En cours</p>
+              <h3 id="metric-in-transit">—</h3>
+            </article>
+            <article class="stat-card">
+              <p class="muted">Livrées</p>
+              <h3 id="metric-delivered">—</h3>
+            </article>
+          </div>
+        </section>
 
         <section id="access-denied" class="card hidden">
           <h2>Accès refusé</h2>
@@ -45,63 +76,93 @@
         </section>
 
         <section id="orders-view" class="view active">
-          <div class="card filters">
-            <div class="field-inline">
-              <label for="status-filter">Statut</label>
-              <select id="status-filter">
-                <option value="all">Tous</option>
-                <option value="created">Créé</option>
-                <option value="assigned">Assigné</option>
-                <option value="in_transit">En transit</option>
-                <option value="delivered">Livré</option>
-                <option value="cancelled">Annulé</option>
-              </select>
+          <div class="panel-grid">
+            <div class="card filters">
+              <div class="field-inline">
+                <label for="status-filter">Statut</label>
+                <select id="status-filter">
+                  <option value="all">Tous</option>
+                  <option value="created">Créé</option>
+                  <option value="assigned">Assigné</option>
+                  <option value="in_transit">En transit</option>
+                  <option value="delivered">Livré</option>
+                  <option value="cancelled">Annulé</option>
+                </select>
+              </div>
+              <div class="field-inline">
+                <label for="assignment-filter">Assignation</label>
+                <select id="assignment-filter">
+                  <option value="all">Toutes</option>
+                  <option value="assigned">Assignées</option>
+                  <option value="unassigned">Non assignées</option>
+                </select>
+              </div>
+              <div class="field-inline grow">
+                <label for="search-filter">Recherche</label>
+                <input id="search-filter" type="search" placeholder="ID ou adresse" />
+              </div>
+              <button id="refresh-orders" class="ghost-btn">Rafraîchir</button>
             </div>
-            <div class="field-inline">
-              <label for="assignment-filter">Assignation</label>
-              <select id="assignment-filter">
-                <option value="all">Toutes</option>
-                <option value="assigned">Assignées</option>
-                <option value="unassigned">Non assignées</option>
-              </select>
+            <div class="card quick-actions">
+              <div class="card__header">
+                <div>
+                  <p class="eyebrow">Actions rapides</p>
+                  <h3>Commandes fraîches</h3>
+                </div>
+              </div>
+              <p class="muted">
+                Filtrez par statut ou assignez un livreur. Les nouvelles commandes apparaissent en temps réel.
+              </p>
+              <div class="action-row">
+                <button id="open-first-order" class="ghost-btn">Ouvrir la première commande</button>
+                <button id="refresh-drivers" class="ghost-btn ghost-secondary">Actualiser les livreurs</button>
+              </div>
             </div>
-            <div class="field-inline grow">
-              <label for="search-filter">Recherche</label>
-              <input id="search-filter" type="search" placeholder="ID ou adresse" />
-            </div>
-            <button id="refresh-orders" class="ghost-btn">Rafraîchir</button>
           </div>
 
-          <div class="card table-card">
-            <div class="table-head">
-              <h2>Commandes</h2>
-              <p id="orders-count" class="muted"></p>
+          <div class="layout-split">
+            <div class="card table-card">
+              <div class="table-head">
+                <div>
+                  <p class="eyebrow">Suivi</p>
+                  <h2>Commandes</h2>
+                </div>
+                <p id="orders-count" class="muted"></p>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Client</th>
+                      <th>Livreur</th>
+                      <th>Statut</th>
+                      <th>Créée</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-table"></tbody>
+                </table>
+              </div>
+              <div id="orders-empty" class="empty hidden">Aucune commande trouvée.</div>
             </div>
-            <div class="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Client</th>
-                    <th>Livreur</th>
-                    <th>Statut</th>
-                    <th>Créée</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="orders-table"></tbody>
-              </table>
-            </div>
-            <div id="orders-empty" class="empty hidden">Aucune commande trouvée.</div>
-          </div>
 
-          <div id="order-detail" class="card hidden"></div>
+            <div id="order-detail" class="card detail-card">
+              <p class="muted">Sélectionnez une commande pour afficher le détail.</p>
+            </div>
+          </div>
         </section>
 
         <section id="drivers-view" class="view">
           <div class="card table-card">
             <div class="table-head">
-              <h2>Livreurs</h2>
+              <div>
+                <p class="eyebrow">Flotte</p>
+                <h2>Livreurs</h2>
+              </div>
+              <div class="action-row">
+                <button id="refresh-drivers-secondary" class="ghost-btn">Rafraîchir</button>
+              </div>
             </div>
             <div class="table-wrapper">
               <table>

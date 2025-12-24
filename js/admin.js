@@ -9,21 +9,30 @@ const state = {
   realtime: null,
 }
 
-const ordersTable = document.getElementById('orders-table')
-const ordersEmpty = document.getElementById('orders-empty')
-const ordersCount = document.getElementById('orders-count')
-const orderDetail = document.getElementById('order-detail')
-
-const driversTable = document.getElementById('drivers-table')
-const driversEmpty = document.getElementById('drivers-empty')
-
-const statusFilter = document.getElementById('status-filter')
-const assignmentFilter = document.getElementById('assignment-filter')
-const searchFilter = document.getElementById('search-filter')
-const refreshOrdersBtn = document.getElementById('refresh-orders')
-
-const toast = document.getElementById('toast')
-const views = document.querySelectorAll('.view')
+const els = {
+  ordersTable: document.getElementById('orders-table'),
+  ordersEmpty: document.getElementById('orders-empty'),
+  ordersCount: document.getElementById('orders-count'),
+  orderDetail: document.getElementById('order-detail'),
+  driversTable: document.getElementById('drivers-table'),
+  driversEmpty: document.getElementById('drivers-empty'),
+  statusFilter: document.getElementById('status-filter'),
+  assignmentFilter: document.getElementById('assignment-filter'),
+  searchFilter: document.getElementById('search-filter'),
+  refreshOrdersBtn: document.getElementById('refresh-orders'),
+  refreshDriversBtn: document.getElementById('refresh-drivers'),
+  refreshDriversSecondaryBtn: document.getElementById('refresh-drivers-secondary'),
+  openFirstOrderBtn: document.getElementById('open-first-order'),
+  metrics: {
+    total: document.getElementById('metric-total'),
+    assigned: document.getElementById('metric-assigned'),
+    inTransit: document.getElementById('metric-in-transit'),
+    delivered: document.getElementById('metric-delivered'),
+  },
+  lastSync: document.getElementById('last-sync'),
+  toast: document.getElementById('toast'),
+  views: document.querySelectorAll('.view'),
+}
 
 const formatDate = (value) => {
   if (!value) return '—'
@@ -31,11 +40,11 @@ const formatDate = (value) => {
 }
 
 const showToast = (message, variant = 'info') => {
-  if (!toast) return
-  toast.textContent = message
-  toast.className = `toast ${variant}`
-  toast.classList.remove('hidden')
-  setTimeout(() => toast.classList.add('hidden'), 3200)
+  if (!els.toast) return
+  els.toast.textContent = message
+  els.toast.className = `toast ${variant}`
+  els.toast.classList.remove('hidden')
+  setTimeout(() => els.toast.classList.add('hidden'), 3200)
 }
 
 const badge = (text) => `<span class="badge">${text}</span>`
@@ -43,43 +52,78 @@ const badge = (text) => `<span class="badge">${text}</span>`
 const shortId = (id) => `#${id}`
 
 const setOrdersLoading = (isLoading) => {
-  if (!ordersTable) return
-  ordersTable.classList.toggle('loading', isLoading)
-  refreshOrdersBtn && (refreshOrdersBtn.disabled = isLoading)
+  if (els.ordersTable) {
+    els.ordersTable.classList.toggle('loading', isLoading)
+  }
+  ;[els.refreshOrdersBtn, els.refreshDriversBtn, els.refreshDriversSecondaryBtn].forEach((btn) => {
+    if (btn) btn.disabled = isLoading
+  })
 }
 
 const setDetailMessage = (message) => {
-  if (!orderDetail) return
-  orderDetail.classList.remove('hidden')
-  orderDetail.innerHTML = `<p class="muted">${message}</p>`
+  if (!els.orderDetail) return
+  els.orderDetail.classList.remove('hidden')
+  els.orderDetail.innerHTML = `<p class="muted">${message}</p>`
+}
+
+const updateMetrics = () => {
+  if (!els.metrics.total) return
+
+  const counters = {
+    total: state.orders.length,
+    assigned: 0,
+    inTransit: 0,
+    delivered: 0,
+  }
+
+  state.orders.forEach((order) => {
+    if (order.driver_id) counters.assigned += 1
+    if (order.current_status === 'delivered') counters.delivered += 1
+    if (['in_transit', 'assigned', 'created'].includes(order.current_status)) counters.inTransit += 1
+  })
+
+  els.metrics.total.textContent = counters.total
+  els.metrics.assigned.textContent = counters.assigned
+  els.metrics.inTransit.textContent = counters.inTransit
+  els.metrics.delivered.textContent = counters.delivered
+
+  if (els.lastSync) {
+    els.lastSync.textContent = `Dernière sync : ${new Date().toLocaleTimeString()}`
+  }
 }
 
 const renderOrders = () => {
-  ordersTable.innerHTML = ''
+  if (!els.ordersTable || !els.ordersEmpty || !els.ordersCount) return
+
+  els.ordersTable.innerHTML = ''
   const list = state.orders
 
   if (!list.length) {
-    ordersEmpty?.classList.remove('hidden')
-    if (ordersCount) ordersCount.textContent = '0 commande'
-    orderDetail?.classList.add('hidden')
+    els.ordersEmpty.classList.remove('hidden')
+    els.ordersCount.textContent = '0 commande'
+    state.activeOrderId = null
+    setDetailMessage('Aucune commande pour le moment. Créez-en ou attendez une nouvelle entrée Supabase.')
+    updateMetrics()
     return
   }
 
-  ordersEmpty?.classList.add('hidden')
-  if (ordersCount) ordersCount.textContent = `${list.length} commande${list.length > 1 ? 's' : ''}`
+  els.ordersEmpty.classList.add('hidden')
+  els.ordersCount.textContent = `${list.length} commande${list.length > 1 ? 's' : ''}`
 
   list.forEach((order) => {
     const row = document.createElement('tr')
     row.innerHTML = `
       <td>${shortId(order.id)}</td>
-      <td>${order.profiles?.email || '—'}</td>
-      <td>${order.driver?.email || '—'}</td>
-      <td>${badge(order.current_status)}</td>
+      <td>${order.profiles?.email || order.user_id || '—'}</td>
+      <td>${order.driver?.email || order.driver_id || '—'}</td>
+      <td>${badge(order.current_status || '—')}</td>
       <td>${formatDate(order.created_at)}</td>
       <td class="table-actions"><button data-open="${order.id}" class="ghost-btn">Ouvrir</button></td>
     `
-    ordersTable.appendChild(row)
+    els.ordersTable.appendChild(row)
   })
+
+  updateMetrics()
 }
 
 const renderStatusHistory = (events = []) => {
@@ -171,20 +215,21 @@ const renderAssignments = (assignments = []) => {
 }
 
 const renderOrderDetail = (order) => {
+  if (!els.orderDetail) return
   if (!order) {
     setDetailMessage('Sélectionnez une commande pour afficher le détail.')
     return
   }
 
-  orderDetail.classList.remove('hidden')
-  orderDetail.innerHTML = `
+  els.orderDetail.classList.remove('hidden')
+  els.orderDetail.innerHTML = `
     <div class="detail-header">
       <div>
         <p class="eyebrow">Commande</p>
         <h2>${shortId(order.id)}</h2>
-        <p class="muted">Client : ${order.profiles?.email || '—'}</p>
+        <p class="muted">Client : ${order.profiles?.email || order.user_id || '—'}</p>
       </div>
-      <div class="pill">${order.current_status}</div>
+      <div class="pill">${order.current_status || '—'}</div>
     </div>
     <div class="detail-grid">
       <div>
@@ -199,7 +244,7 @@ const renderOrderDetail = (order) => {
       </div>
       <div>
         <p class="label">Livreur</p>
-        <p class="value">${order.driver?.email || 'Non assigné'}</p>
+        <p class="value">${order.driver?.email || order.driver_id || 'Non assigné'}</p>
       </div>
       <div>
         <p class="label">Créée le</p>
@@ -239,6 +284,7 @@ const renderOrderDetail = (order) => {
 
   const assignBtn = document.getElementById('assign-driver')
   const select = document.getElementById('driver-select')
+  if (select && order.driver_id) select.value = order.driver_id
 
   assignBtn?.addEventListener('click', async () => {
     const driverId = select.value
@@ -263,47 +309,58 @@ const renderOrderDetail = (order) => {
   })
 }
 
-const fetchOrders = async () => {
-  setOrdersLoading(true)
+const buildOrdersQuery = () => {
+  const columns = `id, user_id, driver_id, pickup_address, delivery_address, expected_pickup, expected_delivery, current_status, created_at,
+    profiles:user_id (email, full_name),
+    driver:driver_id (email, full_name),
+    order_status_events (id, status, reason, note, performed_by, created_at),
+    scan_proofs (id, scan_type, scan_payload, image_url, note, performed_by, created_at),
+    driver_assignments (id, driver_id, assigned_by, assigned_at, unassigned_at, note, driver:driver_id (email, full_name))`
 
-  let query = supabase
-    .from('orders')
-    .select(
-      `id, user_id, driver_id, pickup_address, delivery_address, expected_pickup, expected_delivery, current_status, created_at,
-       profiles:user_id (email, full_name),
-       driver:driver_id (email, full_name),
-       order_status_events (id, status, reason, note, performed_by, created_at),
-       scan_proofs (id, scan_type, scan_payload, image_url, note, performed_by, created_at),
-       driver_assignments (id, driver_id, assigned_by, assigned_at, unassigned_at, note, driver:driver_id (email, full_name))`
-    )
-    .order('created_at', { ascending: false })
+  let query = supabase.from('orders').select(columns).order('created_at', { ascending: false })
 
-  const status = statusFilter.value
+  const status = els.statusFilter?.value
   if (status && status !== 'all') query = query.eq('current_status', status)
 
-  const assignment = assignmentFilter.value
+  const assignment = els.assignmentFilter?.value
   if (assignment === 'assigned') query = query.not('driver_id', 'is', null)
   if (assignment === 'unassigned') query = query.is('driver_id', null)
 
-  const search = searchFilter.value.trim()
+  const search = els.searchFilter?.value?.trim()
   if (search) {
     const asNumber = Number(search)
     if (!Number.isNaN(asNumber)) {
       query = query.eq('id', asNumber)
     } else {
-      query = query.or(
-        `pickup_address.ilike.%${search}%,delivery_address.ilike.%${search}%`
-      )
+      query = query.or(`pickup_address.ilike.%${search}%,delivery_address.ilike.%${search}%`)
     }
   }
 
-  const { data, error } = await query
+  return query
+}
+
+const fetchOrders = async () => {
+  setOrdersLoading(true)
+
+  let { data, error } = await buildOrdersQuery()
+
+  if (error) {
+    console.warn('Full query failed, fallback to minimal select', error)
+    const fallback = await supabase
+      .from('orders')
+      .select('id, user_id, driver_id, pickup_address, delivery_address, expected_pickup, expected_delivery, current_status, created_at')
+      .order('created_at', { ascending: false })
+
+    data = fallback.data
+    error = fallback.error
+  }
+
   setOrdersLoading(false)
 
   if (error) {
     showToast('Erreur lors du chargement des commandes', 'error')
     console.error(error)
-    ordersEmpty?.classList.remove('hidden')
+    els.ordersEmpty?.classList.remove('hidden')
     return
   }
 
@@ -311,6 +368,16 @@ const fetchOrders = async () => {
   state.ordersCache.clear()
   state.orders.forEach((o) => state.ordersCache.set(o.id, o))
   renderOrders()
+
+  if (!state.activeOrderId && state.orders.length) {
+    state.activeOrderId = state.orders[0].id
+  }
+
+  if (state.activeOrderId) {
+    renderOrderDetail(state.ordersCache.get(state.activeOrderId))
+  }
+
+  updateMetrics()
 }
 
 const fetchDrivers = async () => {
@@ -328,6 +395,10 @@ const fetchDrivers = async () => {
 
   state.drivers = data || []
   renderDrivers()
+
+  if (state.activeOrderId && state.ordersCache.has(state.activeOrderId)) {
+    renderOrderDetail(state.ordersCache.get(state.activeOrderId))
+  }
 }
 
 const fetchDriverStats = async () => {
@@ -356,14 +427,15 @@ const fetchDriverStats = async () => {
 }
 
 const renderDrivers = async () => {
-  driversTable.innerHTML = ''
+  if (!els.driversTable || !els.driversEmpty) return
+  els.driversTable.innerHTML = ''
   const stats = await fetchDriverStats()
 
   if (!state.drivers.length) {
-    driversEmpty.classList.remove('hidden')
+    els.driversEmpty.classList.remove('hidden')
     return
   }
-  driversEmpty.classList.add('hidden')
+  els.driversEmpty.classList.add('hidden')
 
   state.drivers.forEach((driver) => {
     const stat = stats.get(driver.id) || { assigned: 0, in_progress: 0, delivered: 0 }
@@ -376,7 +448,7 @@ const renderDrivers = async () => {
       <td>${stat.in_progress}</td>
       <td>${stat.delivered}</td>
     `
-    driversTable.appendChild(row)
+    els.driversTable.appendChild(row)
   })
 }
 
@@ -435,6 +507,18 @@ const handleRealtime = () => {
         }
       }
     )
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async () => {
+      await fetchOrders()
+      showToast('Nouvelle commande reçue')
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, async (payload) => {
+      const orderId = payload.new.id
+      state.ordersCache.set(orderId, { ...state.ordersCache.get(orderId), ...payload.new })
+      await fetchOrders()
+      if (state.activeOrderId === orderId) {
+        await openOrder(orderId)
+      }
+    })
     .subscribe()
 }
 
@@ -447,12 +531,13 @@ const bindNavigation = () => {
       document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'))
       btn.classList.add('active')
 
-      views.forEach((view) => {
+      els.views.forEach((view) => {
         view.classList.toggle('active', view.id === target)
       })
 
       const title = target === 'drivers-view' ? 'Livreurs' : 'Commandes'
-      document.getElementById('page-title').textContent = title
+      const pageTitle = document.getElementById('page-title')
+      if (pageTitle) pageTitle.textContent = target ? (title || 'Commandes') : 'Commandes'
 
       if (target === 'drivers-view') {
         fetchDrivers()
@@ -462,23 +547,27 @@ const bindNavigation = () => {
 }
 
 const bindFilters = () => {
-  ;[statusFilter, assignmentFilter].forEach((el) => {
+  ;[els.statusFilter, els.assignmentFilter].forEach((el) => {
     el?.addEventListener('change', fetchOrders)
   })
 
-  if (searchFilter) {
+  if (els.searchFilter) {
     let debounce
-    searchFilter.addEventListener('input', () => {
+    els.searchFilter.addEventListener('input', () => {
       clearTimeout(debounce)
       debounce = setTimeout(fetchOrders, 250)
     })
-    searchFilter.addEventListener('keyup', (e) => {
+    els.searchFilter.addEventListener('keyup', (e) => {
       if (e.key === 'Enter') fetchOrders()
     })
   }
-  refreshOrdersBtn?.addEventListener('click', fetchOrders)
 
-  ordersTable.addEventListener('click', (event) => {
+  els.refreshOrdersBtn?.addEventListener('click', fetchOrders)
+}
+
+const bindOrdersTable = () => {
+  if (!els.ordersTable) return
+  els.ordersTable.addEventListener('click', (event) => {
     const target = event.target
     if (target instanceof HTMLButtonElement && target.dataset.open) {
       openOrder(Number(target.dataset.open))
@@ -486,10 +575,25 @@ const bindFilters = () => {
   })
 }
 
+const bindQuickActions = () => {
+  els.refreshDriversBtn?.addEventListener('click', fetchDrivers)
+  els.refreshDriversSecondaryBtn?.addEventListener('click', fetchDrivers)
+  els.openFirstOrderBtn?.addEventListener('click', () => {
+    if (!state.orders.length) {
+      showToast('Aucune commande à ouvrir', 'error')
+      return
+    }
+    openOrder(state.orders[0].id)
+  })
+}
+
 export const initAdmin = (session) => {
   state.session = session
+  setDetailMessage('Sélectionnez une commande pour afficher le détail.')
   bindNavigation()
   bindFilters()
+  bindOrdersTable()
+  bindQuickActions()
   fetchDrivers()
   fetchOrders()
   handleRealtime()
